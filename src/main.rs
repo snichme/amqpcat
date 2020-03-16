@@ -2,9 +2,10 @@ use quicli::prelude::*;
 use std::io;
 use structopt::StructOpt;
 
-use lapin::{options::*, BasicProperties, Channel, Connection, ConnectionProperties};
+use lapin::{Connection, ConnectionProperties};
 
 mod consumer;
+mod produce;
 
 /// amqpcat is a AMQP cli producer and consumer, like netcat but for AMQP.
 #[derive(Debug, StructOpt)]
@@ -36,26 +37,6 @@ pub struct Cli {
     verbosity: Verbosity,
 }
 
-fn produce(ch: Channel, args: Cli) {
-    let mut guess = String::new();
-    loop {
-        io::stdin()
-            .read_line(&mut guess)
-            .expect("Failed to read line");
-        info!("sending {}", guess);
-        ch.basic_publish(
-            "amq.topic",
-            &args.routing_key,
-            BasicPublishOptions::default(),
-            guess.as_bytes().to_vec(),
-            BasicProperties::default(),
-        )
-        .wait()
-        .expect("basic_publish");
-        guess = "".to_string()
-    }
-}
-
 fn main() -> CliResult {
     let args = Cli::from_args();
     args.verbosity.setup_env_logger("amqpcat")?;
@@ -69,10 +50,11 @@ fn main() -> CliResult {
     let channel = conn.create_channel().wait().expect("create_channel");
     info!("state: {:?}", conn.status().state());
 
+    info!("Running {} mode", args.mode);
     if args.mode == "consume" {
         consumer::consume(channel, args)
     } else if args.mode == "produce" {
-        produce(channel, args)
+        produce::produce(channel, args, io::stdin())
     }
 
     Ok(())
