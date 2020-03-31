@@ -1,3 +1,5 @@
+![CI](https://github.com/snichme/amqpcat/workflows/CI/badge.svg)
+
 # amqpcat
  CLI AMQP producer and consumer
 
